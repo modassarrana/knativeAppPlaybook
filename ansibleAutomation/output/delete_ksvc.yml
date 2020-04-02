@@ -1,0 +1,21 @@
+- name: Check virtual service exists for the application
+  shell: "kubectl get vs helloworld-virtualservice -n default"
+  register: r
+  ignore_errors: true
+
+- name: Delete all virtual service for default namespace
+  shell: "kubectl delete vs helloworld-virtualservice -n default"
+  when: 
+    - r.rc == 0
+    - r.stderr == ""
+
+- name: Check kantive service exists 
+  shell: "kubectl get ksvc helloworld-service -n default"
+  register: ret
+  ignore_errors: true
+
+- name: Delete all knative services for default namespaces
+  shell: "kubectl delete ksvc helloworld-service -n default"
+  when: 
+    - ret.rc == 0
+    - ret.stderr == ""

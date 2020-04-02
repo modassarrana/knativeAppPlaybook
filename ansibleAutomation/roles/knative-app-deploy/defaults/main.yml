@@ -1,0 +1,3 @@
+knative_app_path: "~/app"
+docker_artifactory_repo_url: clna-prototype-docker.apro.nbnco.net.au
+#env: default

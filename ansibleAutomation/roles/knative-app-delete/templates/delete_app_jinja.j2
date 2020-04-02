@@ -1,0 +1,25 @@
+{% if delete_list is defined %}
+{% for app in delete_list %}
+- name: Check virtual service exists for the application
+  shell: "kubectl get vs {{ app }}-virtualservice -n {{env}}"
+  register: r
+  ignore_errors: true
+
+- name: Delete all virtual service for default namespace
+  shell: "kubectl delete vs {{ app }}-virtualservice -n {{env}}"
+  when: 
+    - r.rc == 0
+    - r.stderr == ""
+
+- name: Check kantive service exists 
+  shell: "kubectl get ksvc {{ app }}-service -n {{env}}"
+  register: ret
+  ignore_errors: true
+
+- name: Delete all knative services for default namespaces
+  shell: "kubectl delete ksvc {{ app }}-service -n {{env}}"
+  when: 
+    - ret.rc == 0
+    - ret.stderr == ""
+{% endfor %}
+{% endif %}

@@ -1,0 +1,11 @@
+- name: Check if namespace exists
+  shell: "kubectl get namespace/{{ env }}"
+  ignore_errors: true
+  register: r
+
+- name: Create namespace {{ env }}
+  shell: "kubectl create ns {{env}}"
+  when:
+    - r.stderr != ""
+    - r.stderr.find("NotFound") != -1
+

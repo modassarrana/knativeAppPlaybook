@@ -1,0 +1,1 @@
+knative_app_path: "{{knative_path}}/app"

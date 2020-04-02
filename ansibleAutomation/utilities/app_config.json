@@ -1,0 +1,56 @@
+{ 
+   ###########################################################################################################
+   # For delete scenario , only action & delete_list is to be modified. Rest keep it as it is
+   # Ex -> "action": "delete"
+   #       "delete_list" : [ping , getuptime, helloworld] #list down the name of knative servicesto be deleted
+   # Note: By default delete_list key will be commented . Uncomment & update as explain above for delete 
+   #
+   # For deploying knative application on FAAS cluster , action & app_details has to be modified. 
+   # Ex-> "action": "create"
+   #       app_name -> application name
+   #	   app_docker_image -> Docker image for application. Docker will built the imgae with this name
+   #       app_url -> Any specific prefix , you want for url . Ex-> "/ping" for ping application
+   #       docker_tag -> Version for your docker image . Update it
+   #       description -> Its optional. Description about knative application
+   #       package -> List of package you need as part of yor dockerfile. Flask package is mandatory for python
+   #                  application 
+   # Note: app_detail is a list . So Update your application details . Below app_detail list json is an example 
+   #       for developer & tester (as a reference)
+   ############################################################################################################
+
+   "env": "default",  # environment in which this application will be deployed or removed from
+   "docker_artifactory_repo_url": "clna-prototype-docker.apro.nbnco.net.au", # docker artifactory repo 
+   "domain": "example.com", 
+   "action": "create", 
+#   "delete_list": [helloworld],
+   "knative_version": "0.11.0",   
+   "app_detail": [ 
+    {
+	"app_name": "ping", 
+	"app_docker_image": "checkpingconn", 
+        "app_url": "/ping", # Keep this same as you have defined in your application code
+        "docker_tag": "v1",
+        "description": "Knative application details", 
+        "package": [ flask ],
+	"dev_lang": "python"
+    },
+    {
+        "app_name": "getuptime",
+        "app_docker_image": "snmpuptime",
+        "app_url": "/uptime", # Keep this same as you have defined in your application code
+        "docker_tag": "v1",
+        "description": "Knative application details",
+        "package": [ flask , pysnmp ],
+        "dev_lang": "python"
+    },
+    {
+        "app_name": "helloworld",
+        "app_docker_image": "helloworld-go",
+        "app_url": "/", # Keep this same as you have defined in your application code
+        "docker_tag": "v2",
+        "description": "Knative application details",
+	"mod": ["github.com/knative/docs/docs/serving/samples/hello-world/helloworld-go"],
+        "dev_lang": "go"
+    }
+   ]
+}

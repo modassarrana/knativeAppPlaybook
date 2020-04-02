@@ -1,0 +1,20 @@
+
+- name: Load Jinja Templates and Generate Ansible tasks
+  template:
+    src: 'templates/delete_app_jinja.j2'
+    dest: '{{role_path}}/../../output/delete_ksvc.yml'
+    mode: '0755'
+
+- name: Delete the app by using above generated delete yaml
+  include_tasks: '{{role_path}}/../../output/delete_ksvc.yml'
+
+- name: check user defined environment exists
+  shell: "kubectl get namespace/{{ env }}"
+  ignore_errors: true
+  register: r
+
+- name: Delete namespace {{ env }} if it does exists
+  shell: "kubectl delete namespace {{ env }}"
+  when:
+    - r.rc == 0
+    - env != "default"

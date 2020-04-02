@@ -1,0 +1,31 @@
+- name: create knative application folder
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0777
+    recurse: yes
+  with_items:
+    - "{{ knative_app_path }}"
+
+- name: create namespace for environment say dev or test if user has provided
+  include_tasks: create_env.yml
+  when: env is defined
+
+- name: create output folder to have ansible tasks
+  file: 
+    path: "{{role_path}}/../../output"
+    state: directory
+    mode: 0777
+    recurse: yes
+
+- set_fact: 
+    version: "{{ knative_version.split('.') }}"
+
+- name: Generate ansible tasks using Jinja for knative application
+  template:
+    src: 'templates/app_jinja.j2'
+    dest: "{{role_path}}/../../output/app.yml"
+    mode: '0755'
+
+- name: deploy knative application by using above generated tasks
+  include_tasks: "{{role_path}}/../../output/app.yml"

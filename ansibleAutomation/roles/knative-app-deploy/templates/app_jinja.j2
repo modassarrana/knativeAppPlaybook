@@ -1,0 +1,110 @@
+{% if app_detail is defined %}
+{% for app in app_detail %}
+- name: copy the content of application in temporrary file to use while rendering
+  copy: 
+    content: '{{ app | to_json }}'
+    dest: "/tmp/app_detail.json"
+
+- include_vars: "/tmp/app_detail.json"
+
+- name: create knative application folder
+  file:
+    path: "{{knative_app_path}}/{{app.app_name}}"
+    state: directory
+    mode: 0777
+    recurse: yes
+
+{% if app.dev_lang == "Python" %}
+- name: move user function to {{ knative_app_path }}/{{app.app_name}}
+  copy:
+    src: '{{role_path}}/../../utilities/app/{{app.app_name}}/{{app.app_name}}.py'
+    dest: "{{knative_app_path}}/{{app.app_name}}/{{app.app_name}}.py"
+{% endif %}
+
+{% if app.dev_lang == "go" %}
+- name: move user function to {{ knative_app_path }}/{{app.app_name}}
+  copy:
+    src: '{{role_path}}/../../utilities/app/{{app.app_name}}/{{app.app_name}}.go'
+    dest: "{{knative_app_path}}/{{app.app_name}}/{{app.app_name}}.go"
+{% endif %}
+
+{% if app.package is defined %}
+- name: List down all the packages in requirement.txt required as part of your application
+  template:
+    src: 'templates/requirements.j2'
+    dest: "{{knative_app_path}}/{{app.app_name}}/requirements.txt"
+    mode: '0755'
+{% endif %}
+
+{% if app.dev_lang == "go" %}
+- name: Generate docker file for application by using docker Jinja
+  template:
+    src: 'templates/dockerfile_go.j2'
+    dest: "{{knative_app_path}}/{{app.app_name}}/Dockerfile"
+    mode: '0755'
+{% else %}
+- name: Generate docker file for application by using docker Jinja
+  template:
+    src: 'templates/dockerfile.j2'
+    dest: "{{knative_app_path}}/{{app.app_name}}/Dockerfile"
+    mode: '0755'
+{% endif %}
+- name: build docker image for knative application
+  shell: "docker build --network=host -t {{docker_artifactory_repo_url}}/{{app.app_docker_image}}:{{app.docker_tag}} ."
+  args:
+    chdir: "{{knative_app_path}}/{{app.app_name}}/"
+  register: r
+
+- name: push docker image to artifactory repository
+  shell: "docker push {{docker_artifactory_repo_url}}/{{app.app_docker_image}}:{{app.docker_tag}}"
+  register: p
+  when: r.rc == 0
+
+- name: create service for knative application
+  template:
+    src: 'templates/service.yml'
+    dest: "{{knative_app_path}}/{{app.app_name}}/service.yaml"
+    mode: '0755'
+  register: ksvc
+
+- name: create virtualservice for knative application
+  template:
+    src: 'templates/virtualService.yml'
+    dest: "{{knative_app_path}}/{{app.app_name}}/virtualService.yaml"
+    mode: '0755'
+  register: vs
+
+- name: apply Knative service for {{app.app_name}}
+  shell: "kubectl apply -f service.yaml" 
+  args:
+    chdir: "{{knative_app_path}}/{{app.app_name}}/"
+
+- pause: seconds=30
+
+- name: apply knative virtual service for {{app.app_name}}
+  shell: "kubectl apply -f virtualService.yaml"
+  args:
+    chdir: "{{knative_app_path}}/{{app.app_name}}/"
+
+- pause: seconds=10
+
+- name: check Knative service has come up
+  shell: "kubectl get ksvc -n {{env}} | grep {{app.app_name}} | awk -F' ' '{print $5}'"
+  register: ret
+  until: ret.stdout == "True"
+  retries: 5
+  delay: 10
+  ignore_errors: true
+
+- name: failed custom message if above tasks ret is not true
+  shell: "kubectl get ksvc -n {{env}} | grep {{app.app_name}} | awk -F' ' '{print $3}'"
+  register: status
+  failed_when: ret.stdout != "True"
+
+{% endfor %}
+- name: remove temporary app_detail file
+  file:
+    path: "/tmp/app_detail.json"
+    state: absent
+
+{% endif %}
